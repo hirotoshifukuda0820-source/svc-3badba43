@@ -44,18 +44,27 @@ async function sha256(text){
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
   return [...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,'0')).join('');
 }
-async function check(){
-  const v = document.getElementById('pw').value;
+async function tryPass(v){
   const h = await sha256(v);
   if(h === HASH){
-    sessionStorage.setItem('itmap_ok','1');
+    localStorage.setItem('itmap_ok','1');
     location.href = TARGET;
-  } else {
-    document.getElementById('err').textContent = 'パスワードが違います';
+    return true;
   }
+  return false;
+}
+async function check(){
+  const ok = await tryPass(document.getElementById('pw').value);
+  if(!ok) document.getElementById('err').textContent = 'パスワードが違います';
 }
 document.getElementById('go').addEventListener('click', check);
 document.getElementById('pw').addEventListener('keydown', e=>{ if(e.key==='Enter') check(); });
+
+// 既にこの端末で認証済みなら即通過（毎回の入力を省く）
+if(localStorage.getItem('itmap_ok')==='1'){ location.href = TARGET; }
+// SharePoint埋め込み用: URLに ?p=パスワード を付けておくと自動通過（SharePoint側の閲覧権限が実質のゲートになる）
+const auto = new URLSearchParams(location.search).get('p');
+if(auto) tryPass(auto);
 </script>
 </body>
 </html>
